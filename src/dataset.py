@@ -6,8 +6,8 @@ import os
 
 from typing import Union, Tuple
 
-from ..Xml2Py import H5PY_DIR_PATH
-
+H5PY_DIR_PATH = "/media/isir/PHD/code/data_processing/Xml2Py/data"
+DATA_PATH = "/media/isir/storage/PHD/Data_CareToys/"
 
 
 
@@ -50,6 +50,18 @@ class Dataset():
 
         print("\n")
 
+    def merge(self) -> dict:
+
+        final_dict = self.__getitem__(0)
+        final_dict = {k:[v] for k,v in final_dict.items()}
+        
+        for i in range(1,len(self.id)):
+            for k,v in self.__getitem__(i).items():
+                final_dict[k].append(v)
+                
+
+        return final_dict
+
 class RingDataset(Dataset):
 
     def __init__(self, data : h5py.Dataset) -> None:
@@ -65,7 +77,7 @@ class RingDataset(Dataset):
         t = self.h5dataset[idx]['intervals']
         t = t - t[0]
 
-        data['intervals'] = t
+        data['intervals'] = t/1000 # converting to seconds
 
         data['pressure'] = np.array(self.h5dataset[idx]['pressure']['value'])
         data['raw_pressure'] = np.array(self.h5dataset[idx]['pressure']['raw_value'])
@@ -103,7 +115,7 @@ class ImuDataset(Dataset):
         t = self.h5dataset[idx]['intervals']
         t = t - t[0]
 
-        data['intervals'] = t
+        data['intervals'] = t/1000
 
         for part in ['lh','rh','trunk']:
             
@@ -138,7 +150,7 @@ class MatDataset(Dataset):
         t = self.h5dataset[idx]['intervals']
         t = t - t[0]
 
-        data['intervals'] = t
+        data['intervals'] = t/1000
 
 
         
@@ -155,17 +167,4 @@ class MatDataset(Dataset):
 
 
 
-import matplotlib.pyplot as plt 
-
-if __name__ == "__main__":
-
-
-    ring_ds = RingDataset(H5PY_DIR_PATH+'/ringDataset')
-    imu_ds = ImuDataset(H5PY_DIR_PATH+'/imuDataset')
-    mat_ds = MatDataset(H5PY_DIR_PATH+'/matDataset')
-
-    ring_ds.show_struct()
-    imu_ds.show_struct()
-    mat_ds.show_struct()
-    
 

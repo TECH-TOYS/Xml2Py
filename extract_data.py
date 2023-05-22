@@ -8,8 +8,8 @@ import os
 #import cv2
 import scipy.io
 
-from ..Xml2Py import DATA_PATH, H5PY_DIR_PATH
 
+from src import DATA_PATH, H5PY_DIR_PATH
 
 
 imu_keys = ['acc_x','acc_y','acc_z','mag_x','mag_y','mag_z','gyro_x','gyro_y','gyro_z']
@@ -130,14 +130,12 @@ def extract_mat_feature(root,grp,path):
 
 if __name__ == "__main__":
 
-    h5py_dir = "./data"
-    if not os.path.isdir(h5py_dir):
-        os.mkdir(h5py_dir)
 
 
-    ringDataset = h5py.File(os.path.join(h5py_dir,"ringDataset"),"w")
-    imuDataset = h5py.File(os.path.join(h5py_dir,"imuDataset"),"w")
-    matDataset = h5py.File(os.path.join(h5py_dir,"matDataset"),"w")
+
+    ringDataset = h5py.File(os.path.join(H5PY_DIR_PATH,"ringDataset"),"w")
+    imuDataset = h5py.File(os.path.join(H5PY_DIR_PATH,"imuDataset"),"w")
+    matDataset = h5py.File(os.path.join(H5PY_DIR_PATH,"matDataset"),"w")
 
 
 
