@@ -13,14 +13,31 @@ DATA_PATH = "/media/isir/storage/PHD/Data_CareToys/"
 
 class Dataset():
 
+
     def __init__(self, path : str) -> None:
+
+        """
+            Parent class for dataset-like classes
+            Implements indexing, dataset structure visualization and merging across trials
+
+        """
+
 
         self.h5dataset = h5py.File(path,'r')
         self.id = list(self.h5dataset.keys())
 
 
 
-    def __getitem__(self, idx : Union[int,Tuple[str,str]]) -> dict:
+    def __getitem__(self, idx : Union[int,Tuple[str,str]]) -> str:
+
+        """
+            Parameters: 
+            idx: int (trial position in the dataset) or tuple(str,str) (infant id + session id)
+
+            Return:
+            idx [str]: index from trial id list
+
+        """
 
         if isinstance(idx,tuple):
             idx = f'{idx[0]}_{idx[1]}'
@@ -35,7 +52,11 @@ class Dataset():
         return idx
     
 
-    def show_struct(self):
+    def show_struct(self) -> None:
+
+        """
+            Prints hdf5 dataset's structure
+        """
 
         print(self.name + " dataset structure :")
 
@@ -52,19 +73,33 @@ class Dataset():
 
     def merge(self) -> dict:
 
-        final_dict = self.__getitem__(0)
-        final_dict = {k:[v] for k,v in final_dict.items()}
+        """
+            Merges data accross trials (i.e., accross infant and session)
+
+            Return:
+            merged_dict [dict]: dictionnary of signals accross every trials
+
+        """
+
+
+        merged_dict = self.__getitem__(0)
+        merged_dict = {k:[v] for k,v in merged_dict.items()}
         
         for i in range(1,len(self.id)):
             for k,v in self.__getitem__(i).items():
-                final_dict[k].append(v)
+                merged_dict[k].append(v)
                 
 
-        return final_dict
+        return merged_dict
 
 class RingDataset(Dataset):
 
     def __init__(self, data : h5py.Dataset) -> None:
+
+        """
+            Dataset for ring data
+        """
+
         super().__init__(data)
         self.name = "Ring"
     
@@ -102,6 +137,11 @@ class RingDataset(Dataset):
 class ImuDataset(Dataset):
 
     def __init__(self, data : h5py.Dataset) -> None:
+
+        """
+            Dataset for imu data
+        """
+
         super().__init__(data)
         self.name = "IMU"
 
@@ -123,9 +163,13 @@ class ImuDataset(Dataset):
                 for axe in ['x','y','z']:
                     data[f'{part}_{sensor}_{axe}'] = np.array(self.h5dataset[idx][part][f'{sensor}_{axe}'])
 
+
+            # Measures are derived from raw IMU data
+            # For hand IMU: azimut and elevation
             if part in ['lh','rh']:
                 for measure in ['az','az_base','elev','elev_base']: 
                     data[f'{part}_{measure}'] = np.array(self.h5dataset[idx][part][f'{part}_{measure}'])
+            # For trunk IMU: rotational measurements
             else:
                 for measure in ['alpha','pitch','roll','yaw']: 
                     data[f'{part}_{measure}'] = np.array(self.h5dataset[idx][part][f'{part}_{measure}'])
@@ -137,6 +181,11 @@ class ImuDataset(Dataset):
 class MatDataset(Dataset):
 
     def __init__(self, data : h5py.Dataset) -> None:
+
+        """
+            Dataset for mat data
+        """
+    
         super().__init__(data)
         self.name = "Mat"
 
@@ -153,7 +202,7 @@ class MatDataset(Dataset):
         data['intervals'] = t/1000
 
 
-        
+        # Offset removal from the raw data
         ref_mat = np.array(self.h5dataset[idx]['ref_mat'])
         mat = self.h5dataset[idx]['data']
         mat = np.maximum(mat - ref_mat[np.newaxis,:], 0).reshape((mat.shape[0],64,32))
