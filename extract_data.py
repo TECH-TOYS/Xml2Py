@@ -8,8 +8,8 @@ import os
 #import cv2
 import scipy.io
 
+from src.dataset import *
 
-from src import DATA_PATH, H5PY_DIR_PATH
 
 
 imu_keys = ['acc_x','acc_y','acc_z','mag_x','mag_y','mag_z','gyro_x','gyro_y','gyro_z']
