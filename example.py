@@ -2,12 +2,14 @@ from src.dataset import *
 import matplotlib.pyplot as plt
 import numpy as np
 
+import os 
+
 if __name__ == "__main__":
 
     """ Data loading """
 
     # Load the ring dataset
-    ring_ds = RingDataset(H5PY_DIR_PATH+'/ringDataset')
+    ring_ds = RingDataset(os.path.join(H5PY_DIR_PATH,'ringDataset'))
 
     # Visualize the dataset structure and trial list
     ring_ds.show_struct()

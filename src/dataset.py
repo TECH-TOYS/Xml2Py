@@ -6,8 +6,14 @@ import os
 
 from typing import Union, Tuple
 
+
+# For Linux and Mac OS
 H5PY_DIR_PATH = "/media/isir/PHD/code/data_processing/Xml2Py/data"
 DATA_PATH = "/media/isir/storage/PHD/Data_CareToys/"
+
+# For Windows
+# H5PY_DIR_PATH = "\media\isir\PHD\code\data_processing\Xml2Py\data"
+# DATA_PATH = "\media\isir\storage\PHD\Data_CareToys\\"
 
 
 
@@ -207,6 +213,49 @@ class MatDataset(Dataset):
         mat = self.h5dataset[idx]['data']
         mat = np.maximum(mat - ref_mat[np.newaxis,:], 0).reshape((mat.shape[0],64,32))
         data['mat'] = mat
+
+        return data
+    
+
+class PosDataset(Dataset):
+
+    def __init__(self, data : h5py.Dataset) -> None:
+
+        """
+            Dataset for position and posture data
+        """
+    
+        super().__init__(data)
+        self.name = "Pos"
+
+
+    def __getitem__(self, idx: Union[int,Tuple[str, str]]) -> dict:
+        
+        idx = super().__getitem__(idx)
+
+        data = {}
+
+        t = np.array(self.h5dataset[idx]['intervals'])
+        t = t - t[0]
+
+        data['intervals'] = t/1000
+
+        err = np.array(self.h5dataset[idx]['error'])
+        err[err!=0] = 1
+        data['error'] = err
+
+
+        location = list(self.h5dataset[idx].keys())
+        location.remove('intervals')
+        location.remove('error')
+
+        for loc in location:
+
+            data[loc] = {p:None for p in self.h5dataset[idx][loc].keys()}
+
+            for part in self.h5dataset[idx][loc].keys():
+                 data[loc][part] = np.array(self.h5dataset[idx][loc][part])
+          
 
         return data
     
