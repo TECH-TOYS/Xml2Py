@@ -28,12 +28,22 @@ pos_keys = ['cop','head','upper_body','yaw','shoulder','hand','side','palm']
 
 def check_format(fname: str):
 
+    """
+    Checks if 'sensors.xml' exists and if so, if it is parsable
+    
+    Return:  available sensor
+             root of the .xml file
+    """
+
     
     if not os.path.isfile(fname):
         print("No sensors.xml file for patient/session",fname)
         return None, None
 
-    root = etree.parse(fname).getroot()
+    try :
+        root = etree.parse(fname).getroot()
+    except:
+        return None, None
 
     return get_session_sensors(root), root
 
@@ -41,12 +51,39 @@ def check_format(fname: str):
 
 def get_session_sensors(root : etree.Element):
 
+    """
+    Return:  Available sensors in the .xml file
+    """
 
     initial_frame = root.getchildren()[0]
     return np.unique([block.attrib['name'] for block in initial_frame.getchildren()])
 
 
+
+
+
+"""
+
+Modality-specific feature extraction functions for one session
+Each modality as it own hierarchy but have the following organization:
+
+    id [group]
+        timestamp [dataset]
+        error [dataset]
+        sensor/location#1 [group]
+            component#1 of sensor#1 [dataset]
+            component#2 of sensor#1 [dataset]
+            ....
+        sensor/location#2 [group]
+            component#1 of sensor#2 [dataset]
+            component#2 of sensor#2 [dataset]
+            ....
+        
+
+"""
+
 def extract_pos_features(root : etree.Element, grp : h5py.Group):
+
 
     pos_intervals = root.xpath("frame/block[@name='mat']/@timestamp")
     grp.create_dataset("intervals",data=np.asarray(list(map(float,pos_intervals))))
@@ -168,6 +205,21 @@ def extract_mat_feature(root : etree.Element, grp : h5py.Group, path : str):
 
 
 import matplotlib.pyplot as plt
+import pandas as pd
+
+
+
+"""
+Data extraction is performed by running 
+
+    $ python3 extract_data.py
+
+once in command line.
+
+--> Running this script takes a little bit of time (~15 to 20 minutes)
+
+"""
+
 
 if __name__ == "__main__":
 
@@ -179,66 +231,69 @@ if __name__ == "__main__":
     matDataset = h5py.File(os.path.join(H5PY_DIR_PATH,"matDataset"),"w")
     posDataset = h5py.File(os.path.join(H5PY_DIR_PATH,"posDataset"),"w")
 
+    # annotation = pd.read_csv(DATA_PATH+'/labels.csv').iloc[:,[2,4]]
+    # atypical_annotation = list(annotation[annotation.iloc[:,1]=='A'].iloc[:,0])
+    
 
 
+    count = 0
+    count_ = 0
 
 
     strmat2array = lambda mat : list(map(int,mat.split(' ')[:-1]))
 
 
-    out = False
-    
-
     ids = [d for d in os.listdir(DATA_PATH) if os.path.isdir(os.path.join(DATA_PATH,d))]
+
 
     for id_ in ids:
         
-        if out:
-            break
 
         for session in os.listdir(os.path.join(DATA_PATH,id_)):
 
             print("Extracting data from id = ",id_," / session = ",session,end=" | ")
 
+
             path = os.path.join(DATA_PATH,id_,session,'sensors.xml')
 
+            if os.path.isfile(path):
 
-            id_trial = id_.replace('_','-') + "_" + session
+                id_trial = id_.replace('_','-') + "_" + session
+                used_sensors, root = check_format(path)
 
+                print("Used sensors:", used_sensors)
 
-            used_sensors, root = check_format(path)
-            print("Used sensors:", used_sensors)
+                if root is NotImplemented:
+                    continue
 
-            if root is NotImplemented:
-                continue
-
-
-            if 'mat_daq' in used_sensors:
-
-                mat_grp = matDataset.create_group(id_trial)
-                extract_mat_feature(root,mat_grp,path)
-
-            if 'mat' in used_sensors:
-
-                pos_grp = posDataset.create_group(id_trial)
-                extract_pos_features(root,pos_grp)
-
-
-            if 'ring' in used_sensors:
-
-                ring_grp = ringDataset.create_group(id_trial)
-                extract_ring_feature(root,ring_grp)
                 
+                if used_sensors is None:
+                    continue
 
-            if 'body_imu' in used_sensors:
+                
+                if 'mat_daq' in used_sensors and os.path.isfile(os.path.join('/'.join(path.split('/')), 'outMatrix')):
 
-                imu_grp = imuDataset.create_group(id_trial)
-                extract_imu_feature(root,imu_grp)
+                    mat_grp = matDataset.create_group(id_trial)
+                    extract_mat_feature(root,mat_grp,path)
+
+                if 'mat' in used_sensors:
+
+                    pos_grp = posDataset.create_group(id_trial)
+                    extract_pos_features(root,pos_grp)
+
+
+                if 'ring' in used_sensors:
+
+                    ring_grp = ringDataset.create_group(id_trial)
+                    extract_ring_feature(root,ring_grp)
+                    
+
+                if 'body_imu' in used_sensors:
+
+                    imu_grp = imuDataset.create_group(id_trial)
+                    extract_imu_feature(root,imu_grp)
      
 
-
-            
-                        
     ringDataset.close()
     imuDataset.close()
     matDataset.close()

@@ -33,6 +33,10 @@ class Dataset():
         self.id = list(self.h5dataset.keys())
 
 
+    def __len__(self) -> int :
+
+        return len(self.id)
+
 
     def __getitem__(self, idx : Union[int,Tuple[str,str]]) -> str:
 
@@ -56,6 +60,14 @@ class Dataset():
 
 
         return idx
+    
+    def get_intervals(self, idx : int, absolute : bool):
+
+        if absolute:
+            return np.array(self.h5dataset[idx]['intervals'])
+        else:
+            t = np.array(self.h5dataset[idx]['intervals'])/1000
+            return t - t[0]
     
 
     def show_struct(self) -> None:
@@ -90,35 +102,35 @@ class Dataset():
 
         merged_dict = self.__getitem__(0)
         merged_dict = {k:[v] for k,v in merged_dict.items()}
+        merged_dict['id'] = [self.id[0]]
         
         for i in range(1,len(self.id)):
             for k,v in self.__getitem__(i).items():
                 merged_dict[k].append(v)
+            merged_dict['id'].append(self.id[i])
                 
 
         return merged_dict
 
 class RingDataset(Dataset):
 
-    def __init__(self, data : h5py.Dataset) -> None:
+    def __init__(self) -> None:
 
         """
             Dataset for ring data
         """
 
-        super().__init__(data)
+        super().__init__(os.path.join(H5PY_DIR_PATH, 'ringDataset'))
         self.name = "Ring"
     
-    def __getitem__(self, idx: Union[int,Tuple[str, str]]) -> dict:
+    def __getitem__(self, idx: Union[int,Tuple[str, str]], absolute_time : bool = False) -> dict:
         
         idx = super().__getitem__(idx)
 
         data = {}
+        
 
-        t = self.h5dataset[idx]['intervals']
-        t = t - t[0]
-
-        data['intervals'] = t/1000 # converting to seconds
+        data['intervals'] = self.get_intervals(idx,absolute_time)
 
         data['pressure'] = np.array(self.h5dataset[idx]['pressure']['value'])
         data['raw_pressure'] = np.array(self.h5dataset[idx]['pressure']['raw_value'])
@@ -142,26 +154,23 @@ class RingDataset(Dataset):
 
 class ImuDataset(Dataset):
 
-    def __init__(self, data : h5py.Dataset) -> None:
+    def __init__(self) -> None:
 
         """
             Dataset for imu data
         """
 
-        super().__init__(data)
+        super().__init__(os.path.join(H5PY_DIR_PATH, 'imuDataset'))
         self.name = "IMU"
 
 
-    def __getitem__(self, idx: Union[int,Tuple[str, str]]) -> dict:
+    def __getitem__(self, idx: Union[int,Tuple[str, str]], absolute_time : bool = False) -> dict:
         
         idx = super().__getitem__(idx)
 
         data = {}
 
-        t = self.h5dataset[idx]['intervals']
-        t = t - t[0]
-
-        data['intervals'] = t/1000
+        data['intervals'] = self.get_intervals(idx,absolute_time)
 
         for part in ['lh','rh','trunk']:
             
@@ -186,26 +195,23 @@ class ImuDataset(Dataset):
 
 class MatDataset(Dataset):
 
-    def __init__(self, data : h5py.Dataset) -> None:
+    def __init__(self) -> None:
 
         """
             Dataset for mat data
         """
     
-        super().__init__(data)
+        super().__init__(os.path.join(H5PY_DIR_PATH, 'matDataset'))
         self.name = "Mat"
 
 
-    def __getitem__(self, idx: Union[int,Tuple[str, str]]) -> dict:
+    def __getitem__(self, idx: Union[int,Tuple[str, str]],  absolute_time : bool = False) -> dict:
         
         idx = super().__getitem__(idx)
 
         data = {}
 
-        t = self.h5dataset[idx]['intervals']
-        t = t - t[0]
-
-        data['intervals'] = t/1000
+        data['intervals'] = self.get_intervals(idx,absolute_time)
 
 
         # Offset removal from the raw data
@@ -219,26 +225,23 @@ class MatDataset(Dataset):
 
 class PosDataset(Dataset):
 
-    def __init__(self, data : h5py.Dataset) -> None:
+    def __init__(self) -> None:
 
         """
             Dataset for position and posture data
         """
     
-        super().__init__(data)
+        super().__init__(os.path.join(H5PY_DIR_PATH, 'posDataset'))
         self.name = "Pos"
 
 
-    def __getitem__(self, idx: Union[int,Tuple[str, str]]) -> dict:
+    def __getitem__(self, idx: Union[int,Tuple[str, str]],  absolute_time : bool = False) -> dict:
         
         idx = super().__getitem__(idx)
 
         data = {}
 
-        t = np.array(self.h5dataset[idx]['intervals'])
-        t = t - t[0]
-
-        data['intervals'] = t/1000
+        data['intervals'] = self.get_intervals(idx,absolute_time)
 
         err = np.array(self.h5dataset[idx]['error'])
         err[err!=0] = 1
