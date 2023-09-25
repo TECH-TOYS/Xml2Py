@@ -62,6 +62,66 @@ def get_session_sensors(root : etree.Element):
 
 
 
+def merge_xml_file(path : str) -> bool:
+
+    """
+    Merge "sensor_body_imu.xml" and "sensor_ring.xml" files into a "sensors.xml" if needed
+    
+    """
+
+
+    if os.path.isfile(os.path.join(path,"sensors.xml")):
+
+        return False
+    
+    elif not os.path.isfile(os.path.join(path,"sensor_body_imu.xml")) and \
+         not os.path.isfile(os.path.join(path,"sensor_ring.xml")):
+        
+        return False
+    
+    else:
+
+        body_xml_root = etree.parse(os.path.join(path,"sensor_body_imu.xml")).getroot()
+        ring_xml_root = etree.parse(os.path.join(path,"sensor_ring.xml")).getroot()
+
+        root = etree.Element("results")
+
+        n_frame = min(len(body_xml_root)//10, len(ring_xml_root)//10)
+
+
+        #print([len(a) for a in np.array_split(np.arange(len(body_xml_root.findall("block"))), n_frame)])
+
+        def batch(iterable, n=1):
+            l = len(iterable)
+            batched_list = []
+            for ndx in range(0, l, n):
+                batched_list.append(iterable[ndx:min(ndx + n, l)])
+            return batched_list
+
+        body_elements = batch(body_xml_root.findall("block"), n=10)
+        ring_elements = batch(ring_xml_root.findall("block"), n=10)
+
+
+
+        
+        for f in range(n_frame):
+            
+            frame = etree.SubElement(root, "frame", number=str(f))
+
+            for body_block in body_elements[f]:
+                frame.append(body_block)
+
+            for ring_block in ring_elements[f]:
+                frame.append(ring_block)
+    
+
+        
+        tree = etree.ElementTree(root)
+        tree.write(os.path.join(path,"sensors.xml"), pretty_print=True, xml_declaration=True, encoding="UTF-8")
+        print("xml files have been successfully merged!")
+        return True
+
+
 """
 
 Modality-specific feature extraction functions for one session
@@ -253,6 +313,9 @@ if __name__ == "__main__":
 
             print("Extracting data from id = ",id_," / session = ",session,end=" | ")
 
+            merge_xml_file(os.path.join(DATA_PATH,id_,session))
+
+     
 
             path = os.path.join(DATA_PATH,id_,session,'sensors.xml')
 
