@@ -1,15 +1,16 @@
 import h5py
-
 import numpy as np
+
 import os
-
-
 from typing import Union, Tuple
+import warnings
+
+from data.paths import *
 
 
 # For Linux and Mac OS
 H5PY_DIR_PATH = "/media/isir/PHD/code/data_processing/Xml2Py/data"
-DATA_PATH = "/media/isir/storage/PHD/Data_CareToys/"
+
 
 # For Windows
 # H5PY_DIR_PATH = "\media\isir\PHD\code\data_processing\Xml2Py\data"
@@ -31,6 +32,7 @@ class Dataset():
 
         self.h5dataset = h5py.File(path,'r')
         self.id = list(self.h5dataset.keys())
+        self.annotations = {i:{} for i in self.id}
 
 
     def __len__(self) -> int :
@@ -111,6 +113,12 @@ class Dataset():
                 
 
         return merged_dict
+    
+
+    
+        
+
+            
 
 class RingDataset(Dataset):
 
